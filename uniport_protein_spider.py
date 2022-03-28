@@ -13,9 +13,13 @@ class uni_pider(object):
         r = requests.get(self.main_url)
         soup = BeautifulSoup(r.text)
         s = 'https://www.uniprot.org'
-        s += soup.body.main.find(name='a',attrs={'class':'nextPageLink'})['href']
+        self.flag = 0
+        try:
+            s += soup.body.main.find(name='a',attrs={'class':'nextPageLink'})['href']
+            self.url = s.replace('offset=25','offset={}')
+        except:
+            self.flag = 1
         print('总数量:' + str(soup.body.main.find(name='div',attrs={'class':'main-aside'}).find(name='strong',attrs={'class':'queryResultCount'}).get_text()))
-        self.url = s.replace('offset=25','offset={}')
         self.main()
 
 
@@ -140,14 +144,23 @@ class uni_pider(object):
 
 
     def get_name(self):
-        self.name_queue = Queue()
-        for i in range(0,self.end_num,25):
-            current_url = self.url.format(i)
+        if self.flag:
+            self.name_queue = Queue()
+            current_url = self.main_url
             r = requests.get(current_url)
             name_soup = BeautifulSoup(r.text)
             n = name_soup.body.main.find(name='div',attrs={'class':'main-aside'}).find(name='div',attrs={'class':'content results'}).find(name='div',attrs={'id':'resultsArea'}).form.table.tbody.find_all('tr')
             for i in n:
                 self.name_queue.put(i['id'])
+        else:
+            self.name_queue = Queue()
+            for i in range(0,self.end_num,25):
+                current_url = self.url.format(i)
+                r = requests.get(current_url)
+                name_soup = BeautifulSoup(r.text)
+                n = name_soup.body.main.find(name='div',attrs={'class':'main-aside'}).find(name='div',attrs={'class':'content results'}).find(name='div',attrs={'id':'resultsArea'}).form.table.tbody.find_all('tr')
+                for i in n:
+                    self.name_queue.put(i['id'])
     
     def main(self):
         self.end_num = int(input('爬取数量:'))
